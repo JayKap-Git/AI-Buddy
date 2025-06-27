@@ -7,6 +7,8 @@ from pynput import mouse, keyboard
 import platform
 import subprocess
 
+#for text to be pushed in JSON, user needs to right click on the text 
+
 # Output file
 OUTPUT_FILE = "hover_output.json"
 os.makedirs("screenshots", exist_ok=True)
