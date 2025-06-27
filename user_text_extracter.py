@@ -74,12 +74,12 @@ def on_click(x, y, button, pressed):
             with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
                 json.dump(logs, f, indent=2)
 
-            print(f"✅ Logged at {timestamp}")
+            print(f"--- Logged at {timestamp}")
         except Exception as e:
-            print(f"❌ Error logging: {e}")
+            print(f" Error logging: {e}")
 
 # Start mouse listener
-print("🖱️ Right-click to extract page text as foctext... Ctrl+C to stop.")
+print("--- Right-click to extract page text as foctext... Ctrl+C to stop.")
 with mouse.Listener(on_click=on_click) as listener:
     listener.join()
 
