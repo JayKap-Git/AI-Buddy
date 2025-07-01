@@ -2,6 +2,7 @@ import datetime
 import pytesseract
 from PIL import ImageGrab
 import subprocess
+import os
 import json
 import time
 import pyperclip
@@ -110,6 +111,11 @@ if __name__ == "__main__":
                 clipboard_content = pyperclip.paste()
             image = capture_screenshot(screenshot_path)
             ocr_text = run_ocr(image)
+            # Delete the screenshot after OCR
+            try:
+                os.remove(f"output/{screenshot_path}")
+            except Exception as e:
+                print(f"[Warning] Failed to delete screenshot: {e}")
             import os
             # Read the VS Code live text file (cross-platform)
             vscode_text = ""

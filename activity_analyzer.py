@@ -10,10 +10,12 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.schema import SystemMessage, HumanMessage
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # Google Gemini API key setup
 import os
+
 os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY")  # Set this externally
 
 # Initialize Google Gemini LLM
@@ -22,6 +24,7 @@ llm = ChatGoogleGenerativeAI(
     temperature=0.3,
     convert_system_message_to_human=True
 )
+
 
 def read_latest_user_data() -> Dict[str, Any]:
     """Read the latest user data from live_output.json"""
@@ -33,6 +36,7 @@ def read_latest_user_data() -> Dict[str, Any]:
     except json.JSONDecodeError:
         return {}
 
+
 def read_user_data_file(filename: str) -> Dict[str, Any]:
     """Read a specific user data file"""
     try:
@@ -43,6 +47,7 @@ def read_user_data_file(filename: str) -> Dict[str, Any]:
     except json.JSONDecodeError:
         return {}
 
+
 def get_all_user_data_files() -> List[str]:
     """Get list of all user data files in output directory"""
     try:
@@ -50,6 +55,7 @@ def get_all_user_data_files() -> List[str]:
         return sorted(files)
     except FileNotFoundError:
         return []
+
 
 def analyze_user_activity_from_json(user_data: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -73,13 +79,13 @@ def analyze_user_activity_from_json(user_data: Dict[str, Any]) -> Dict[str, Any]
     timestamp = user_data.get("timestamp", "")
 
     # Combine all text sources for analysis
-#     combined_text = f"""
-# Active Window: {active_window}
-# Focused Text: {focused_text}
-# Clipboard: {clipboard_content}
-# VS Code Text: {vscode_text}
-# Screen OCR: {ocr_text}
-#     """.strip()
+    #     combined_text = f"""
+    # Active Window: {active_window}
+    # Focused Text: {focused_text}
+    # Clipboard: {clipboard_content}
+    # VS Code Text: {vscode_text}
+    # Screen OCR: {ocr_text}
+    #     """.strip()
     combined_text = f"""
 Active Window: {active_window}
 Focused Text: {focused_text}
@@ -96,14 +102,14 @@ Screen OCR: {ocr_text}
         }
 
     system_prompt = """You are an AI assistant that analyzes user activity data to determine what the user is currently doing. 
-    
+
     You have access to multiple data sources:
     - Active Window: The currently active application
     - Focused Text: Text from the focused element
     - Clipboard: Content in the clipboard
     - VS Code Text: Text from VS Code editor (if available)
     - Screen OCR: Text extracted from screen capture
-    
+
     Analyze this data and classify the user's activity into one of these categories:
     - coding: Writing, editing, or reviewing code (Python, JavaScript, etc.)
     - researching: Reading articles, papers, documentation, or searching for information
@@ -116,13 +122,13 @@ Screen OCR: {ocr_text}
     - designing: Working on design, graphics, or creative projects
     - working: General work activities not covered by other categories
     - unknown: Unable to determine the activity
-    
+
     Consider the following patterns:
     - Coding: Look for code syntax, function definitions, imports, IDE elements
     - Messaging: Look for chat interfaces, message bubbles, contact names
     - Researching: Look for articles, documentation, search results
     - Browsing: Look for web browser elements, URLs, navigation
-    
+
     Return your response in valid JSON format with these fields:
     - activity: The classified activity (string)
     - confidence: Confidence level 0.0-1.0 (float)
@@ -130,7 +136,7 @@ Screen OCR: {ocr_text}
     - details: Additional context or specific tools/applications detected (string)
     - data_sources: Which data sources were most useful for classification (string)
     - timestamp: Current timestamp (float)
-    
+
     Example response:
     {
         "activity": "coding",
@@ -140,7 +146,7 @@ Screen OCR: {ocr_text}
         "data_sources": "VS Code text and active window",
         "timestamp": 1234567890.123
     }
-    
+
     Only return valid JSON, no additional text."""
 
     human_prompt = f"Here's the user activity data to analyze:\n\n{combined_text}\n\nPlease analyze this data and determine what the user is doing."
@@ -150,10 +156,10 @@ Screen OCR: {ocr_text}
             SystemMessage(content=system_prompt),
             HumanMessage(content=human_prompt)
         ]
-        
+
         response = llm(messages)
         response_text = response.content.strip()
-        
+
         # Try to parse the JSON response
         try:
             # Handle markdown-wrapped JSON responses
@@ -169,7 +175,7 @@ Screen OCR: {ocr_text}
                 json_end = response_text.rfind("```")
                 if json_start < json_end:
                     response_text = response_text[json_start:json_end].strip()
-            
+
             result = json.loads(response_text)
             # Ensure timestamp is current
             result["timestamp"] = time.time()
@@ -184,7 +190,7 @@ Screen OCR: {ocr_text}
                 "data_sources": "LLM response parsing failed",
                 "timestamp": time.time()
             }
-            
+
     except Exception as e:
         return {
             "activity": "unknown",
@@ -195,24 +201,26 @@ Screen OCR: {ocr_text}
             "timestamp": time.time()
         }
 
+
 def analyze_historical_data(num_files: int = 5) -> List[Dict[str, Any]]:
     """Analyze the most recent user data files"""
     files = get_all_user_data_files()
     if not files:
         return []
-    
+
     # Get the most recent files
     recent_files = files[-num_files:] if len(files) > num_files else files
     results = []
-    
+
     for filename in recent_files:
         user_data = read_user_data_file(filename)
         if user_data:
             analysis = analyze_user_activity_from_json(user_data)
             analysis["source_file"] = filename
             results.append(analysis)
-    
+
     return results
+
 
 def main():
     """Main function to continuously monitor and analyze user activity"""
@@ -241,6 +249,11 @@ def main():
                 # Pretty print the JSON result
                 print("📊 Activity Analysis:")
                 print(json.dumps(result, indent=2))
+                try:
+                    with open("output/prediction_output.json", "w", encoding="utf-8") as f:
+                        json.dump(result, f, indent=2)
+                except Exception as e:
+                    print(f"❌ Failed to save prediction output: {e}")
                 print("=" * 60)
             else:
                 print("⏳ Waiting for new user data...")
@@ -261,11 +274,12 @@ def main():
             gather_proc.kill()
         print("✅ gatheruserdata.py stopped.")
 
+
 def analyze_single_file(filename: str):
     """Analyze a specific user data file"""
     print(f"🔍 Analyzing file: {filename}")
     user_data = read_user_data_file(filename)
-    
+
     if user_data:
         result = analyze_user_activity_from_json(user_data)
         print("📊 Activity Analysis:")
@@ -273,11 +287,12 @@ def analyze_single_file(filename: str):
     else:
         print(f"❌ Could not read file: {filename}")
 
+
 def analyze_recent_files(num_files: int = 5):
     """Analyze the most recent user data files"""
     print(f"🔍 Analyzing {num_files} most recent files...")
     results = analyze_historical_data(num_files)
-    
+
     for result in results:
         print(f"\n📁 File: {result.get('source_file', 'Unknown')}")
         print(f"🎯 Activity: {result.get('activity', 'Unknown')}")
@@ -285,9 +300,10 @@ def analyze_recent_files(num_files: int = 5):
         print(f"📝 Description: {result.get('description', 'No description')}")
         print("-" * 40)
 
+
 if __name__ == "__main__":
     import sys
-    
+
     if len(sys.argv) > 1:
         if sys.argv[1] == "--file" and len(sys.argv) > 2:
             analyze_single_file(sys.argv[2])
